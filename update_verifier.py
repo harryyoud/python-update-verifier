@@ -2,7 +2,7 @@ from __future__ import print_function
 
 from asn1crypto.cms import ContentInfo
 from asn1crypto.algos import DigestAlgorithmId
-from oscrypto.asymmetric import rsa_pkcs1v15_verify, load_public_key
+from oscrypto.asymmetric import rsa_pkcs1v15_verify, ecdsa_verify, load_public_key
 from oscrypto.errors import SignatureError
 
 import argparse
@@ -90,7 +90,7 @@ class SignedFile(object):
                     [80, 75, 5, 6]), ("Multiple EOCD magics; possible exploit")
         return True
 
-    def verify(self, pubkey):
+    def verify(self, pubkey, keytype):
         self.check_valid()
         with open(self.filepath, 'rb') as zipfile:
             zipfile.seek(0, os.SEEK_SET)
@@ -103,7 +103,10 @@ class SignedFile(object):
         sig_type = DigestAlgorithmId.map(sig['digest_algorithm']['algorithm'].dotted)
         with open(pubkey, 'rb') as keyfile:
             keydata = load_public_key(keyfile.read())
-        return rsa_pkcs1v15_verify(keydata, sig_contents, message, sig_type)
+        if keytype.lower() in ['r','rsa']:
+            return rsa_pkcs1v15_verify(keydata, sig_contents, message, sig_type)
+        if keytype.lower() in ['e','ec']:
+            return ecdsa_verify(keydata, sig_contents, message, sig_type)
 
 
 def main():
@@ -111,11 +114,12 @@ def main():
                                                  'Android update files')
     parser.add_argument('public_key')
     parser.add_argument('zipfile')
+    parser.add_argument('keytype', help="RSA (default) or EC", nargs='?', default="RSA")
     args = parser.parse_args()
 
     signed_file = SignedFile(args.zipfile)
     try:
-        signed_file.verify(args.public_key)
+        signed_file.verify(args.public_key, args.keytype)
         print("verified successfully", file=sys.stderr)
     except (SignatureError,
             ValueError,
