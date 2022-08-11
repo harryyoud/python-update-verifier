@@ -103,9 +103,9 @@ class SignedFile(object):
         sig_type = DigestAlgorithmId.map(sig['digest_algorithm']['algorithm'].dotted)
         with open(pubkey, 'rb') as keyfile:
             keydata = load_public_key(keyfile.read())
-        if keytype.lower() in ['r','rsa']:
+        if keytype == 'rsa':
             return rsa_pkcs1v15_verify(keydata, sig_contents, message, sig_type)
-        if keytype.lower() in ['e','ec']:
+        if keytype == 'ec':
             return ecdsa_verify(keydata, sig_contents, message, sig_type)
 
 
@@ -114,7 +114,7 @@ def main():
                                                  'Android update files')
     parser.add_argument('public_key')
     parser.add_argument('zipfile')
-    parser.add_argument('keytype', help="RSA (default) or EC", nargs='?', default="RSA")
+    parser.add_argument('keytype', help="rsa (default) or ec", nargs='?', default="rsa", choices=['rsa', 'ec'])
     args = parser.parse_args()
 
     signed_file = SignedFile(args.zipfile)
